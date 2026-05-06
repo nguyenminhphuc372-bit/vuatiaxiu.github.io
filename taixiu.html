@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Tài Xỉu Casino</title>
+
+<style>
+body {
+    background: #fff;
+    text-align: center;
+    font-family: Arial;
+}
+
+h1 { color: #d4a017; }
+
+.board {
+    margin: 20px auto;
+    padding: 20px;
+    width: 400px;
+    border-radius: 15px;
+    background: #f2f2f2;
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+.tai { background: red; color: white; }
+.xiu { background: blue; color: white; }
+
+.selected { box-shadow: 0 0 15px yellow; }
+.disabled { opacity: 0.5; pointer-events: none; }
+
+.chip { background: gold; font-weight: bold; }
+
+.chip-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+}
+
+.locked-ui {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+#betDisplay {
+    border: 2px solid #000;
+    padding: 10px;
+    margin: 10px;
+    background: white;
+}
+
+#dice span {
+    font-size: 50px;
+    margin: 5px;
+    display: inline-block;
+}
+
+@keyframes rollAnim {
+    0% { transform: rotate(0); }
+    100% { transform: rotate(360deg); }
+}
+
+.dice-roll {
+    animation: rollAnim 0.3s infinite;
+}
+
+@keyframes winFlash {
+    0% { background: #fff; }
+    50% { background: #d4ffd4; }
+    100% { background: #fff; }
+}
+
+.win-anim { animation: winFlash 0.5s 3; }
+
+.big-win { transform: scale(1.2); }
+
+.circle {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin: 2px;
+}
+
+.tai-color { background:red; }
+.xiu-color { background:blue; }
+</style>
+</head>
+
+<body>
+
+<h1>🎰 TÀI XỈU</h1>
+
+<h2>⏳ <span id="timer">60</span>s</h2>
+<h2>💰 <span id="money">500000</span></h2>
+
+<div class="board">
+
+<button class="tai" onclick="setChoice('tai')">TÀI</button>
+<button class="xiu" onclick="setChoice('xiu')">XỈU</button>
+
+<div id="betDisplay">Đã cược: 0</div>
+
+<div class="chip-grid">
+<button class="chip" onclick="addBet(1000)">1000</button>
+<button class="chip" onclick="addBet(2000)">2000</button>
+<button class="chip" onclick="addBet(5000)">5000</button>
+<button class="chip" onclick="addBet(10000)">10000</button>
+<button class="chip" onclick="addBet(20000)">20000</button>
+<button class="chip" onclick="addBet(50000)">50000</button>
+<button class="chip" onclick="addBet(100000)">100000</button>
+<button class="chip" onclick="addBet(200000)">200000</button>
+<button class="chip" onclick="addBet(500000)">500000</button>
+</div>
+
+</div>
+
+<div id="dice">
+<span id="d1">⚀</span>
+<span id="d2">⚀</span>
+<span id="d3">⚀</span>
+</div>
+
+<h2 id="result"></h2>
+<h3 id="lastResult">Kết quả: --</h3>
+
+<div id="history"></div>
+
+<audio id="rollSound" src="https://www.soundjay.com/misc/sounds/dice-roll-1.mp3"></audio>
+<audio id="winSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
+<script>
+let money = 500000;
+let choice = null;
+let bet = 0;
+let history = [];
+let time = 60;
+let locked = false;
+
+function setChoice(c){
+    if(locked) return;
+    choice = c;
+    document.querySelectorAll(".tai,.xiu").forEach(b=>b.classList.remove("selected"));
+    document.querySelector("." + c).classList.add("selected");
+}
+
+function addBet(a){
+    if(!choice){ alert("Chọn trước!"); return; }
+    if(a>money){ alert("Không đủ tiền"); return; }
+
+    money -= a;
+    bet += a;
+    locked = true;
+
+    document.getElementById("money").innerText = money;
+    document.getElementById("betDisplay").innerText = "Đã cược: " + bet;
+
+    document.querySelectorAll(".tai,.xiu").forEach(b=>b.classList.add("disabled"));
+}
+
+function roll(){ return Math.floor(Math.random()*6)+1; }
+
+function getDiceFace(n){
+    return ["","⚀","⚁","⚂","⚃","⚄","⚅"][n];
+}
+
+function countdown(){
+    let i=setInterval(()=>{
+        time--;
+        document.getElementById("timer").innerText=time;
+
+        // khóa cược 10s cuối
+        if(time <= 10){
+            document.querySelector(".chip-grid").classList.add("locked-ui");
+        }
+
+        if(time <= 0){
+            clearInterval(i);
+            runGame();
+        }
+    },1000);
+}
+
+function runGame(){
+    let d1El=document.getElementById("d1");
+    let d2El=document.getElementById("d2");
+    let d3El=document.getElementById("d3");
+
+    let rollSound=document.getElementById("rollSound");
+    let winSound=document.getElementById("winSound");
+
+    d1El.classList.add("dice-roll");
+    d2El.classList.add("dice-roll");
+    d3El.classList.add("dice-roll");
+
+    rollSound.play();
+
+    let inter=setInterval(()=>{
+        d1El.innerText=getDiceFace(roll());
+        d2El.innerText=getDiceFace(roll());
+        d3El.innerText=getDiceFace(roll());
+    },100);
+
+    setTimeout(()=>{
+        clearInterval(inter);
+
+        d1El.classList.remove("dice-roll");
+        d2El.classList.remove("dice-roll");
+        d3El.classList.remove("dice-roll");
+
+        let d1=roll(),d2=roll(),d3=roll();
+        let sum=d1+d2+d3;
+
+        d1El.innerText=getDiceFace(d1);
+        d2El.innerText=getDiceFace(d2);
+        d3El.innerText=getDiceFace(d3);
+
+        let result=sum>=11?"tai":"xiu";
+
+        document.getElementById("lastResult").innerText =
+            "Kết quả: " + result.toUpperCase();
+
+        if(choice && bet>0){
+            if(result===choice){
+                money+=bet*2;
+                let resEl=document.getElementById("result");
+                resEl.innerText="🎉 THẮNG";
+
+                document.body.classList.add("win-anim");
+                resEl.classList.add("big-win");
+
+                winSound.play();
+
+                setTimeout(()=>{
+                    document.body.classList.remove("win-anim");
+                    resEl.classList.remove("big-win");
+                },1000);
+
+            }else{
+                document.getElementById("result").innerText="💀 THUA";
+            }
+        }
+
+        document.getElementById("money").innerText=money;
+
+        history.unshift(result);
+        if(history.length>20) history.pop();
+
+        renderHistory();
+
+        // reset
+        bet=0;
+        choice=null;
+        locked=false;
+
+        document.getElementById("betDisplay").innerText="Đã cược: 0";
+
+        document.querySelectorAll(".tai,.xiu").forEach(b=>{
+            b.classList.remove("selected","disabled");
+        });
+
+        document.querySelector(".chip-grid").classList.remove("locked-ui");
+
+        time=60;
+        countdown();
+
+    },1500);
+}
+
+function renderHistory(){
+    let html="";
+    history.forEach(r=>{
+        html+=`<span class="circle ${r==="tai"?"tai-color":"xiu-color"}"></span>`;
+    });
+    document.getElementById("history").innerHTML=html;
+}
+
+countdown();
+</script>
+
+</body>
+</html>
